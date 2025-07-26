@@ -24,30 +24,52 @@ const elements = {
 
 // Initialize chat interface
 function init() {
-    // Check for API key in localStorage
-    config.apiKey = localStorage.getItem('chat_api_key');
-    
-    // Set up event listeners
-    elements.sendButton.addEventListener('click', handleSendMessage);
-    elements.userInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage();
+    try {
+        console.log('Chat interface initialization started');
+        
+        // Check for API key in localStorage
+        config.apiKey = localStorage.getItem('chat_api_key');
+        console.log('API key retrieved from storage:', config.apiKey ? 'Yes (key exists)' : 'No (key missing)');
+        
+        // Set up event listeners
+        elements.sendButton.addEventListener('click', handleSendMessage);
+        elements.userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+            }
+            // Auto-grow the textarea
+            setTimeout(() => {
+                elements.userInput.style.height = 'auto';
+                elements.userInput.style.height = Math.min(elements.userInput.scrollHeight, 120) + 'px';
+            }, 0);
+        });
+        
+        // If no API key, prompt for one
+        if (!config.apiKey) {
+            requestApiKey();
+        } else {
+            // Add welcome message if API key exists
+            addMessage('bot', 'Hi there! I\'m your AI assistant. How can I help you today?');
         }
-        // Auto-grow the textarea
-        setTimeout(() => {
-            elements.userInput.style.height = 'auto';
-            elements.userInput.style.height = Math.min(elements.userInput.scrollHeight, 120) + 'px';
-        }, 0);
-    });
-    
-    // If no API key, prompt for one
-    if (!config.apiKey) {
-        requestApiKey();
-    }
 
-    // Check API connection
-    checkApiConnection();
+        // Check API connection
+        checkApiConnection();
+        
+        console.log('Chat interface initialization completed');
+    } catch (error) {
+        console.error('Failed to initialize chat interface:', error);
+        // Display error message directly in the UI
+        if (elements.messages) {
+            const errorMsg = document.createElement('div');
+            errorMsg.classList.add('message', 'bot-message', 'error-message');
+            errorMsg.innerHTML = `<div class="message-content">⚠️ Error initializing chat: ${error.message}</div>`;
+            elements.messages.appendChild(errorMsg);
+        } else {
+            // Fallback if messages element isn't available
+            document.body.innerHTML += `<div style="color: red; padding: 20px; text-align: center;">Error initializing chat: ${error.message}</div>`;
+        }
+    }
 }
 
 // Request API key from user
@@ -58,7 +80,7 @@ function requestApiKey() {
         localStorage.setItem('chat_api_key', apiKey);
     } else {
         // Show message if no API key provided
-        addMessage('Please provide an API key to use the chat. Refresh the page to try again.', 'bot');
+        addMessage('bot', 'Please provide an API key to use the chat. Refresh the page to try again.');
         elements.statusIndicator.classList.remove('online');
         elements.statusIndicator.classList.add('offline');
         elements.statusIndicator.title = 'API Key Missing';
@@ -68,24 +90,40 @@ function requestApiKey() {
 // Check if API is accessible
 async function checkApiConnection() {
     try {
+        console.log('Checking API connection...');
+        // Test connection using a simple GET request
         const response = await fetch('/api', {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         });
         
+        // Parse the response to check format
+        const data = await response.json().catch(e => ({
+            error: `Failed to parse API response: ${e.message}`
+        }));
+        
+        console.log('API connection response:', data);
+        
         if (response.ok) {
             console.log('API connection successful');
-            elements.statusIndicator.classList.add('online');
-            elements.statusIndicator.title = 'API Connected';
+            updateConnectionStatus(true);
+            
+            // Only log, don't show error if API key not yet provided
+            if (!config.apiKey) {
+                console.log('No API key provided yet - skipping welcome message');
+                return;
+            }
         } else {
-            throw new Error('API connection failed');
+            throw new Error(`API connection failed with status ${response.status}`);
         }
     } catch (error) {
         console.error('API connection error:', error);
-        elements.statusIndicator.classList.remove('online');
-        elements.statusIndicator.classList.add('offline');
-        elements.statusIndicator.title = 'API Disconnected';
-        addMessage('⚠️ Unable to connect to the chat API. Please check your connection.', 'bot', true);
+        updateConnectionStatus(false);
+        
+        // Only show connection error if API key has been provided
+        if (config.apiKey) {
+            addMessage('bot', 'Unable to connect to the chat API. Please check your connection.', true);
+        }
     }
 }
 
@@ -95,7 +133,7 @@ function handleSendMessage() {
     if (!message) return;
     
     // Add user message to the chat
-    addMessage(message, 'user');
+    addMessage('user', message);
     
     // Clear input
     elements.userInput.value = '';
@@ -106,7 +144,19 @@ function handleSendMessage() {
 }
 
 // Add a message to the chat interface
-function addMessage(text, sender, isError = false) {
+function addMessage(sender, text, isError = false) {
+    // Sanitize input to prevent DOM token errors
+    // This is a simple fix - text is escaped to prevent HTML injection
+    const sanitizeText = (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    };
+
     // Create message element
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', `${sender}-message`);
@@ -117,7 +167,7 @@ function addMessage(text, sender, isError = false) {
     messageContent.classList.add('message-content');
     
     // Process text for markdown-like formatting
-    let processedText = text;
+    let processedText = sanitizeText(text);
     
     // Handle code blocks (simplified)
     processedText = processedText.replace(/```(.+?)```/gs, (match, code) => {
@@ -226,14 +276,29 @@ async function sendMessageToApi(message) {
                     
                     if (fallbackResponse.ok) {
                         const fallbackData = await fallbackResponse.json();
-                        if (fallbackData.success && fallbackData.result) {
-                            await minDelay;
-                            const fallbackReply = fallbackData.result.text || fallbackData.result || 
-                                               'I received your message but encountered an issue with my response.';
-                            addMessage('bot', fallbackReply);
-                            updateConnectionStatus(true);
-                            return;
+                        console.log('Fallback response received:', fallbackData);
+                        
+                        // Extract the fallback response - handle multiple possible formats
+                        let fallbackReply;
+                        
+                        if (fallbackData.completion) {
+                            fallbackReply = fallbackData.completion;
+                        } else if (fallbackData.success && fallbackData.result) {
+                            if (typeof fallbackData.result === 'string') {
+                                fallbackReply = fallbackData.result;
+                            } else if (fallbackData.result.text) {
+                                fallbackReply = fallbackData.result.text;
+                            } else {
+                                fallbackReply = JSON.stringify(fallbackData.result).substring(0, 500);
+                            }
+                        } else {
+                            fallbackReply = 'I received your message but encountered an issue with my response.';
                         }
+                        
+                        await minDelay;
+                        addMessage('bot', fallbackReply);
+                        updateConnectionStatus(true);
+                        return;
                     }
                 } catch (fallbackError) {
                     console.error('Fallback request failed:', fallbackError);
@@ -255,39 +320,49 @@ async function sendMessageToApi(message) {
         
         await minDelay;  // Ensure typing indicator shows for at least the minimum time
         
-        if (!data.success || !data.result) {
-            console.error('Invalid API response format:', data);
+        if (!data.success) {
+            console.error('Invalid API response format - missing success flag:', data);
             throw new Error('API returned an invalid response format');
         }
         
-        // Extract the assistant's reply with better error handling
-        let assistantReply;
-        if (data.result.choices && data.result.choices.length > 0) {
-            // Handle chat completion format
+        // Extract the assistant's reply - handle different response formats
+        let assistantReply = null;
+        
+        // Format 1: API returns direct completion field
+        if (data.completion) {
+            assistantReply = data.completion;
+        } 
+        // Format 2: API returns result with choices array
+        else if (data.result && data.result.choices && data.result.choices.length > 0) {
             if (data.result.choices[0].message && data.result.choices[0].message.content) {
                 assistantReply = data.result.choices[0].message.content;
-            } 
-            // Handle completion format
-            else if (data.result.choices[0].text) {
+            } else if (data.result.choices[0].text) {
                 assistantReply = data.result.choices[0].text;
             }
+        }
+        // Format 3: API returns result directly as text
+        else if (data.result && (typeof data.result === 'string')) {
+            assistantReply = data.result;
         }
         
         // Default response if we couldn't extract from standard formats
         if (!assistantReply) {
             console.warn('Using fallback response extraction');
-            assistantReply = data.result.text || data.result.content || 
-                          JSON.stringify(data.result).substring(0, 500) || 
+            // Try to extract from any available field
+            assistantReply = data.text || 
+                          data.content || 
+                          (data.result ? (data.result.text || data.result.content || JSON.stringify(data.result).substring(0, 500)) : null) || 
                           'I processed your request but encountered an issue formatting my response.';
         }
         
         // Add bot message to UI and history
+        console.log('Adding assistant reply to chat:', assistantReply);
         addMessage('bot', assistantReply);
         updateConnectionStatus(true);
         
     } catch (error) {
         console.error('API error:', error);
-        addMessage('bot', `⚠️ ${error.message || 'Something went wrong. Please try again.'}`, true);
+        addMessage('bot', `Error: ${error.message || 'Something went wrong. Please try again.'}`, true);
         updateConnectionStatus(false);
     } finally {
         showTypingIndicator(false);
@@ -312,6 +387,23 @@ function getTimestamp() {
 // Scroll to the bottom of the chat
 function scrollToBottom() {
     elements.messages.scrollTop = elements.messages.scrollHeight;
+}
+
+// Update connection status indicator
+function updateConnectionStatus(isConnected) {
+    if (elements.statusIndicator) {
+        if (isConnected) {
+            elements.statusIndicator.classList.remove('offline');
+            elements.statusIndicator.classList.add('online');
+            elements.statusIndicator.title = 'API Connected';
+        } else {
+            elements.statusIndicator.classList.remove('online');
+            elements.statusIndicator.classList.add('offline');
+            elements.statusIndicator.title = 'API Disconnected';
+        }
+    } else {
+        console.warn('Status indicator element not found');
+    }
 }
 
 // Initialize when DOM is loaded

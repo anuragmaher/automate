@@ -1,6 +1,18 @@
 // Serverless function for chat endpoint
-require('dotenv').config();
-const { generateChatCompletion } = require('../../utils/openai');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
+
+// Import the OpenAI utility with proper path resolution
+let openaiUtilPath;
+try {
+  // Try to resolve the path for Vercel production environment
+  openaiUtilPath = require.resolve('../../utils/openai');
+} catch (error) {
+  // Fallback for Vercel environment
+  openaiUtilPath = path.join(process.cwd(), 'utils', 'openai.js');
+}
+
+const { generateChatCompletion } = require(openaiUtilPath);
 
 module.exports = async (req, res) => {
   // Only allow POST requests
@@ -53,8 +65,13 @@ module.exports = async (req, res) => {
     if (result.success) {
       return res.json({
         success: true,
-        completion: result.text,
-        data: result.data
+        result: {
+          choices: [{
+            message: {
+              content: result.text
+            }
+          }]
+        }
       });
     } else {
       return res.status(500).json({
