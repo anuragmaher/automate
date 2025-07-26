@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Assistant</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="logo">
+                <i class="fas fa-robot"></i>
+            </div>
+            <h1>AI Assistant</h1>
+            <div class="status-indicator online" title="API Connected"></div>
+        </div>
+        
+        <div class="messages-container" id="messages">
+            <!-- Messages will be inserted here by JavaScript -->
+            <div class="message bot-message">
+                <div class="message-content">
+                    <p>👋 Hi there! I'm your AI assistant. How can I help you today?</p>
+                </div>
+                <div class="message-timestamp">Just now</div>
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <textarea 
+                id="user-input" 
+                placeholder="Type your message here..." 
+                rows="1"
+                autofocus></textarea>
+            <button id="send-button" title="Send message">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+        
+        <div class="typing-indicator" id="typing-indicator">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+        </div>
+    </div>
+
+    <script src="./js/chat.js"></script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 // Main server file for API with simple API key authentication and LLM integration
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 // Import routes
@@ -13,6 +14,9 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors()); // Enable CORS for all routes
 app.use(express.json()); // Parse JSON request bodies
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Simple request logger
 app.use((req, res, next) => {
@@ -44,6 +48,15 @@ app.get('/api/health', (req, res) => {
 // Mount route handlers
 app.use('/api/llm', llmRoutes);
 
+// SPA fallback route - serve index.html for any non-API route that doesn't match a static file
+app.get('*', (req, res, next) => {
+  // Skip this middleware if the request is for API
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -54,11 +67,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler for undefined routes
+// 404 handler for undefined API routes
 app.use((req, res) => {
+  // This will only trigger for API routes that weren't found
   res.status(404).json({
     success: false,
-    message: `Route not found: ${req.method} ${req.path}`
+    message: `API route not found: ${req.method} ${req.path}`
   });
 });
 
