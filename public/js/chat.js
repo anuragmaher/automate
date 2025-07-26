@@ -10,6 +10,7 @@ const config = {
     messageHistory: [],
     maxMessages: 100,  // Limit the number of messages to prevent memory issues
     typingDelay: 700,  // How long to show typing indicator before response
+    isProduction: window.location.hostname.includes('vercel.app'),  // Check if running in production
 };
 
 // DOM elements
@@ -180,8 +181,12 @@ async function sendMessageToApi(message) {
         // Set a minimum delay for the typing indicator
         const minDelay = new Promise(resolve => setTimeout(resolve, config.typingDelay));
         
+        // Handle API errors or use simple-prompt as fallback if chat fails
+        let apiUrl = config.apiEndpoint;
+        console.log('Sending request to:', apiUrl);
+        
         // Send API request
-        const response = await fetch(config.apiEndpoint, {
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -195,25 +200,95 @@ async function sendMessageToApi(message) {
         });
         
         // Process response
-        const data = await response.json();
-        
-        // Wait for the minimum typing delay
-        await minDelay;
-        
-        // Handle errors
         if (!response.ok) {
-            throw new Error(data.message || 'Error communicating with the AI');
+            console.error(`API error: Status ${response.status}`);
+            const errorData = await response.json().catch(() => {
+                console.error('Failed to parse error response as JSON');
+                return {};
+            });
+            console.error('Error details:', errorData);
+            
+            // If on Vercel and the chat endpoint fails, try the simple-prompt endpoint as fallback
+            if (config.isProduction && config.apiEndpoint === '/api/llm/chat') {
+                console.log('Attempting fallback to simple-prompt endpoint');
+                try {
+                    const fallbackResponse = await fetch('/api/llm/simple-prompt', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-api-key': config.apiKey
+                        },
+                        body: JSON.stringify({
+                            prompt: message,
+                            temperature: 0.7
+                        })
+                    });
+                    
+                    if (fallbackResponse.ok) {
+                        const fallbackData = await fallbackResponse.json();
+                        if (fallbackData.success && fallbackData.result) {
+                            await minDelay;
+                            const fallbackReply = fallbackData.result.text || fallbackData.result || 
+                                               'I received your message but encountered an issue with my response.';
+                            addMessage('bot', fallbackReply);
+                            updateConnectionStatus(true);
+                            return;
+                        }
+                    }
+                } catch (fallbackError) {
+                    console.error('Fallback request failed:', fallbackError);
+                }
+            }
+            
+            throw new Error(`API error ${response.status}: ${errorData.message || response.statusText}`);
+        }
+
+        // Safely parse the JSON response with error handling
+        let data;
+        try {
+            data = await response.json();
+            console.log('Received API response:', data);
+        } catch (parseError) {
+            console.error('Failed to parse API response as JSON:', parseError);
+            throw new Error('Failed to parse API response');
         }
         
-        // Add bot response
-        if (data.success && data.completion) {
-            addMessage(data.completion, 'bot');
-        } else {
-            throw new Error('Invalid response format');
+        await minDelay;  // Ensure typing indicator shows for at least the minimum time
+        
+        if (!data.success || !data.result) {
+            console.error('Invalid API response format:', data);
+            throw new Error('API returned an invalid response format');
         }
+        
+        // Extract the assistant's reply with better error handling
+        let assistantReply;
+        if (data.result.choices && data.result.choices.length > 0) {
+            // Handle chat completion format
+            if (data.result.choices[0].message && data.result.choices[0].message.content) {
+                assistantReply = data.result.choices[0].message.content;
+            } 
+            // Handle completion format
+            else if (data.result.choices[0].text) {
+                assistantReply = data.result.choices[0].text;
+            }
+        }
+        
+        // Default response if we couldn't extract from standard formats
+        if (!assistantReply) {
+            console.warn('Using fallback response extraction');
+            assistantReply = data.result.text || data.result.content || 
+                          JSON.stringify(data.result).substring(0, 500) || 
+                          'I processed your request but encountered an issue formatting my response.';
+        }
+        
+        // Add bot message to UI and history
+        addMessage('bot', assistantReply);
+        updateConnectionStatus(true);
+        
     } catch (error) {
         console.error('API error:', error);
-        addMessage(`⚠️ ${error.message || 'Something went wrong. Please try again.'}`, 'bot', true);
+        addMessage('bot', `⚠️ ${error.message || 'Something went wrong. Please try again.'}`, true);
+        updateConnectionStatus(false);
     } finally {
         showTypingIndicator(false);
     }
