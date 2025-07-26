@@ -4,14 +4,21 @@
   "description": "Serverless API hosted on Vercel",
   "main": "index.js",
   "scripts": {
+    "dev": "node index.js",
     "start": "vercel dev",
     "deploy": "vercel deploy --prod",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["serverless", "api", "vercel"],
+  "keywords": [
+    "serverless",
+    "api",
+    "vercel"
+  ],
   "author": "",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "express": "^4.21.2"
+  },
   "devDependencies": {
     "vercel": "^33.0.0"
   }

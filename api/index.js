@@ -1,17 +1,9 @@
-// Root API endpoint
+// Root API endpoint using CommonJS format
 module.exports = (req, res) => {
+  // Using the standard Express-like response object
   res.status(200).json({
     message: 'API is running!',
     timestamp: new Date().toISOString(),
-    endpoints: [
-      {
-        path: '/api',
-        description: 'This endpoint (Root API)'
-      },
-      {
-        path: '/api/hello',
-        description: 'Hello world endpoint'
-      }
-    ]
+    note: 'This is the root API endpoint (/api)'
   });
 };
