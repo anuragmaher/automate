@@ -1,0 +1,181 @@
+{
+    "automation_rules": {
+      "when": {
+        "triggers": [
+          "New conversation (inbound) is received",
+          "New conversation (outbound) is sent", 
+          "New conversation (inbound or outbound) is created",
+          "External reply is received from anyone",
+          "External reply is received from the contact",
+          "Mailbox reply is sent",
+          "Assignee is changed",
+          "Tag(s) is added",
+          "Tag(s) is removed",
+          "Status is updated",
+          "CSAT rating is received",
+          "VA Name is updated",
+          "Client Name is updated",
+          "Due Date is updated"
+        ]
+      },
+      "if": {
+        "conditions": {
+          "From email": [
+            "is",
+            "is present in",
+            "is not",
+            "contains any of",
+            "does not contain",
+            "matches"
+          ],
+          "From domain": [
+            "is",
+            "is present in", 
+            "is not",
+            "contains any of",
+            "does not contain",
+            "matches"
+          ],
+          "To email": [
+            "contains any of",
+            "does not contain"
+          ],
+          "Cc": [
+            "is",
+            "is present in",
+            "is not", 
+            "contains any of",
+            "does not contain",
+            "matches"
+          ],
+          "Reply to": [
+            "is",
+            "is present in",
+            "is not",
+            "contains any of", 
+            "does not contain",
+            "matches"
+          ],
+          "Subject": [
+            "is",
+            "is present in",
+            "is not",
+            "contains any of",
+            "does not contain",
+            "matches"
+          ],
+          "Body": [
+            "contains any of",
+            "does not contain"
+          ],
+          "Creation time": [
+            "is within",
+            "is outside",
+            "is within business hours",
+            "is outside business hours"
+          ],
+          "Time Passed Since": [
+            "No external reply received is",
+            "No change in status is",
+            "No change in assignee is", 
+            "No change in tags is"
+          ],
+          "Date": [
+            "is on",
+            "is before",
+            "is after",
+            "is between"
+          ],
+          "Day": [
+            "is",
+            "is not"
+          ],
+          "Salesforce Contact Email": [
+            "is",
+            "is not",
+            "contains any of",
+            "does not contain"
+          ],
+          "Salesforce Contact Name": [
+            "is", 
+            "is not",
+            "contains any of",
+            "does not contain"
+          ],
+          "Salesforce Account Website": [
+            "is",
+            "is not",
+            "contains any of", 
+            "does not contain"
+          ]
+        }
+      },
+      "then": {
+        "actions": [
+          "Add tag",
+          "Assign to user",
+          "Change status",
+          "Assign among users",
+          "Update Salesforce",
+          "Send email"
+        ]
+      },
+      "usage_statistics": {
+        "most_common_combinations": [
+          {
+            "trigger": "new_conversation",
+            "conditions": ["from"],
+            "action": "add_tag",
+            "usage_count": 5434
+          },
+          {
+            "trigger": "new_conversation", 
+            "conditions": ["subject"],
+            "action": "add_tag",
+            "usage_count": 2912
+          },
+          {
+            "trigger": "new_conversation",
+            "conditions": ["from"],
+            "action": "assign",
+            "usage_count": 2528
+          },
+          {
+            "trigger": "new_conversation",
+            "conditions": ["from", "subject"],
+            "action": "status",
+            "usage_count": 1937
+          },
+          {
+            "trigger": "new_conversation",
+            "conditions": ["from"],
+            "action": "status", 
+            "usage_count": 1720
+          }
+        ],
+        "trigger_distribution": {
+          "new_conversation": "Most common trigger",
+          "new_email_incoming_from_anyone": "Rare usage",
+          "new_email_outgoing": "Rare usage", 
+          "new_email_incoming_from_contact": "Rare usage"
+        },
+        "condition_popularity": {
+          "from": "Most used condition",
+          "subject": "Second most used",
+          "to": "Third most used",
+          "body": "Fourth most used",
+          "cc": "Less common",
+          "email_creation_time": "Time-based rules",
+          "salesforce_fields": "Integration specific"
+        },
+        "action_distribution": {
+          "add_tag": "Most common action",
+          "assign": "Second most common", 
+          "status": "Third most common",
+          "assign_among": "Less common",
+          "salesforce": "Integration specific",
+          "send_mail": "Rare usage"
+        }
+      }
+    }
+  }
