@@ -2,17 +2,17 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
 
-// Import the OpenAI utility with proper path resolution
-let openaiUtilPath;
+// Import the LLM controller with proper path resolution
+let controllerPath;
 try {
   // Try to resolve the path for Vercel production environment
-  openaiUtilPath = require.resolve('../../utils/openai');
+  controllerPath = require.resolve('../../controllers/llm.controller');
 } catch (error) {
   // Fallback for Vercel environment
-  openaiUtilPath = path.join(process.cwd(), 'utils', 'openai.js');
+  controllerPath = path.join(process.cwd(), 'controllers', 'llm.controller.js');
 }
 
-const { generateCompletion } = require(openaiUtilPath);
+const LLMController = require(controllerPath);
 
 module.exports = async (req, res) => {
   // Only allow POST requests
@@ -33,32 +33,14 @@ module.exports = async (req, res) => {
   }
   
   try {
-    const { prompt } = req.body;
-    
-    if (!prompt) {
-      return res.status(400).json({
-        success: false,
-        message: 'Prompt is required'
-      });
-    }
-    
-    // Using default parameters for simplicity
-    const result = await generateCompletion(prompt);
+    const result = await LLMController.handleSimplePromptRequest(req.body);
     
     if (result.success) {
-      return res.json({
-        success: true,
-        result: {
-          text: result.text,
-          choices: [{
-            text: result.text
-          }]
-        }
-      });
+      return res.json(result.data);
     } else {
-      return res.status(500).json({
+      return res.status(result.statusCode).json({
         success: false,
-        message: 'Error generating completion',
+        message: result.message,
         error: result.error
       });
     }

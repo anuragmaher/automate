@@ -2,17 +2,17 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
 
-// Import the OpenAI utility with proper path resolution
-let openaiUtilPath;
+// Import the LLM controller with proper path resolution
+let controllerPath;
 try {
   // Try to resolve the path for Vercel production environment
-  openaiUtilPath = require.resolve('../../utils/openai');
+  controllerPath = require.resolve('../../controllers/llm.controller');
 } catch (error) {
   // Fallback for Vercel environment
-  openaiUtilPath = path.join(process.cwd(), 'utils', 'openai.js');
+  controllerPath = path.join(process.cwd(), 'controllers', 'llm.controller.js');
 }
 
-const { generateChatCompletion } = require(openaiUtilPath);
+const LLMController = require(controllerPath);
 
 module.exports = async (req, res) => {
   // Only allow POST requests
@@ -33,50 +33,14 @@ module.exports = async (req, res) => {
   }
   
   try {
-    const { messages, model, temperature, maxTokens } = req.body;
-    
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Messages array is required and must not be empty'
-      });
-    }
-    
-    // Validate message format
-    const validMessages = messages.every(msg => 
-      msg.role && msg.content && 
-      typeof msg.role === 'string' && 
-      typeof msg.content === 'string'
-    );
-    
-    if (!validMessages) {
-      return res.status(400).json({
-        success: false,
-        message: 'Each message must have a role and content'
-      });
-    }
-    
-    const result = await generateChatCompletion(messages, {
-      model,
-      temperature, 
-      maxTokens
-    });
+    const result = await LLMController.handleChatCompletionRequest(req.body);
     
     if (result.success) {
-      return res.json({
-        success: true,
-        result: {
-          choices: [{
-            message: {
-              content: result.text
-            }
-          }]
-        }
-      });
+      return res.json(result.data);
     } else {
-      return res.status(500).json({
+      return res.status(result.statusCode).json({
         success: false,
-        message: 'Error generating chat completion',
+        message: result.message,
         error: result.error
       });
     }
