@@ -1,0 +1,16 @@
+{
+    "tags": {
+        "17384": "ENGINE",
+        "12345": "Support",
+        "67890": "Urgent"
+    },
+    "users": {
+        "5877": "John Smith",
+        "1234": "Alice Johnson"
+    },
+    "statuses": {
+        "1": "Open",
+        "2": "In Progress",
+        "3": "Resolved"
+    }
+}

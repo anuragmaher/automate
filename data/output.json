@@ -1,0 +1,41 @@
+{
+    "priority": 979,
+    "default": 0,
+    "sm_auto_id": 931,
+    "name": "ENGINE",
+    "active": 1,
+    "trigger": "new_conversation_inbound",
+    "conditions": [
+        [
+            {
+                "property": "subject",
+                "op": "contains",
+                "values": [
+                    "ENGINE-"
+                ],
+                "options": null,
+                "time_slot": {
+                    "start": null,
+                    "end": null,
+                    "timezone": null
+                }
+            }
+        ]
+    ],
+    "body_condition_present": false,
+    "actions": [
+        {
+            "type": "add_tag",
+            "data": {
+                "tag_ids": [
+                    17384
+                ]
+            }
+        }
+    ],
+    "creator_id": 5877,
+    "updated_by": 5877,
+    "created_at": "2018-09-08T17:56:12",
+    "updated_at": "2023-07-18T10:55:48",
+    "is_available": true
+}
