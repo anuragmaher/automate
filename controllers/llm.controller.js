@@ -192,8 +192,97 @@ async function handleSimplePromptRequest(requestData) {
   }
 }
 
+/**
+ * Handle full prompt request - takes the entire prompt configuration directly
+ * @param {Object} requestData - The entire request data to be passed to the OpenAI API
+ * @returns {Promise<Object>} - Result object with success status and response data
+ */
+async function handleFullPromptRequest(requestData) {
+  // Input validation
+  if (!requestData) {
+    return {
+      success: false,
+      statusCode: 400,
+      message: 'Request data is required'
+    };
+  }
+  
+  try {
+    // Validate if the request contains minimal required OpenAI parameters
+    if (!requestData.model) {
+      return {
+        success: false,
+        statusCode: 400,
+        message: 'Model parameter is required'
+      };
+    }
+    
+    // Support both a simple prompt string or a full messages array
+    let messages = [];
+    
+    if (requestData.prompt && typeof requestData.prompt === 'string') {
+      // If a simple prompt string is provided, convert it to a messages array
+      messages = [{ role: 'user', content: requestData.prompt }];
+    } else if (requestData.messages && Array.isArray(requestData.messages) && requestData.messages.length > 0) {
+      // Use the provided messages array
+      messages = requestData.messages;
+    } else {
+      return {
+        success: false,
+        statusCode: 400,
+        message: 'Either a prompt string or messages array is required'
+      };
+    }
+
+    // Call OpenAI with the messages
+    const { generateChatCompletion } = require('../utils/openai');
+    
+    const result = await generateChatCompletion(messages, {
+      model: requestData.model,
+      temperature: requestData.temperature,
+      maxTokens: requestData.max_tokens || requestData.maxTokens
+      // Pass any other parameters that might be in the request
+    });
+    
+    if (result.success) {
+      return {
+        success: true,
+        statusCode: 200,
+        data: {
+          success: true,
+          completion: result.text,
+          result: {
+            choices: [{
+              message: {
+                content: result.text
+              }
+            }],
+            raw_response: result.data // Include the raw response for full access
+          }
+        }
+      };
+    } else {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Error generating completion with full prompt',
+        error: result.error
+      };
+    }
+  } catch (error) {
+    console.error('Full Prompt LLM API Error:', error);
+    return {
+      success: false,
+      statusCode: 500,
+      message: 'Server error',
+      error: error.message
+    };
+  }
+}
+
 module.exports = {
   handleCompletionRequest,
   handleChatCompletionRequest,
-  handleSimplePromptRequest
+  handleSimplePromptRequest,
+  handleFullPromptRequest
 };

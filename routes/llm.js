@@ -61,4 +61,23 @@ router.post('/simple-prompt', authenticateApiKey, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/llm/full-prompt
+ * Takes the entire prompt configuration as input
+ * Protected by API key authentication
+ */
+router.post('/full-prompt', authenticateApiKey, async (req, res) => {
+  const result = await LLMController.handleFullPromptRequest(req.body);
+  
+  if (result.success) {
+    return res.json(result.data);
+  } else {
+    return res.status(result.statusCode).json({
+      success: false,
+      message: result.message,
+      error: result.error
+    });
+  }
+});
+
 module.exports = router;
